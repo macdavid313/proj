@@ -15,6 +15,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("feature flags specified source build");
         build_from_source()?
     } else {
+        pkg_config::Config::new().probe("sqlite3").map(|pk| {
+            eprintln!(
+                "found acceptable sqlite3 already installed at: {:?}",
+                pk.link_paths[0]
+            );
+            println!("cargo:rustc-link-search=native={:?}", pk.link_paths[0]);
+            println!("cargo:rustc-link-lib=static=sqlite3");
+        });
         pkg_config::Config::new()
         .atleast_version(MINIMUM_PROJ_VERSION)
         .probe("proj")
@@ -36,8 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Tell cargo to tell rustc to link the system proj
             // shared library.
             println!("cargo:rustc-link-search=native={:?}", pk.link_paths[0]);
-            println!("cargo:rustc-link-lib=proj");
-
+            println!("cargo:rustc-link-lib=static=proj");
             pk.include_paths[0].clone()
         })
         .or_else(|err| {
